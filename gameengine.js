@@ -38,6 +38,10 @@ class GameEngine {
         this.wheel = null;
         this.surfaceWidth = null;
         this.surfaceHeight = null;
+        this.left = 0;
+        this.right = 0;
+        this.top = 0;
+        this.bot = 0;
     }
     init(ctx) {
         this.ctx = ctx;
@@ -118,27 +122,7 @@ class GameEngine {
         this.updateMarines();
         this.updateTyranids();
         this.updateMarineCount();
-        // this.updateTyranidCount();
-        // if (this.spawnMarine) {
-        //     console.log("marine spawned");
-        //     spawnMarine(this);
-        // }
-        // if (this.spawnAnotherMarine) {
-        //     console.log("anothermarine spawned");
-        //     spawnMarine(this);
-        // }
-        // if (this.spawnTyranid) {
-        //     console.log("tyranid spawned")
-        //     spawnTyranid(this);
-        // }
-        // if (this.spawnAnotherTyranid) {
-        //     console.log("another tyranid spawned")
-        //     spawnTyranid(this);
-        // }
-        // this.spawnMarine = false;
-        // this.spawnAnotherMarine = false;
-        // this.spawnTyranid = false;
-        // this.spawnAnotherTyranid = false;
+        this.updateTyranidCount();
         this.draw();
         this.click = null;
         this.rightclick = null;
