@@ -64,7 +64,9 @@ class GameEngine {
     draw() {
         this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
         this.ctx.save();
+        // drawWalls(this.ctx);
         this.background.draw(this.ctx);
+        drawWalls(this.ctx);
         for (var i = 0; i < this.marines.length; i++) {
             this.marines[i].draw(this.ctx);
         }
@@ -116,7 +118,7 @@ class GameEngine {
         this.updateMarines();
         this.updateTyranids();
         this.updateMarineCount();
-        this.updateTyranidCount();
+        // this.updateTyranidCount();
         // if (this.spawnMarine) {
         //     console.log("marine spawned");
         //     spawnMarine(this);

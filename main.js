@@ -11,11 +11,13 @@ class Boi extends Entity {
         let distNearest = distance(this, nearest);
         this.game[species].forEach( other => {
             let distOther = distance(this, other);
-            if (distNearest > distOther) {
+            if (distNearest > distOther && !other.removeFromWorld) {
                 nearest = other;
                 distNearest = distOther;
             }
         });
+        if (nearest.x === 100000)
+            console.log("NO NEAREST ENEMY BOIII")
         return nearest;
     }
     draw(ctx) {
@@ -25,7 +27,7 @@ class Boi extends Entity {
         ctx.fill();
         ctx.closePath();
     }
-    moveToEnemyX(xTarget) {
+    moveToX(xTarget) {
         if (this.x < xTarget) { // go right 
             let diff = xTarget - this.x;
             let moveAmount = Math.min(diff, this.move);
@@ -38,7 +40,7 @@ class Boi extends Entity {
             this.move -= moveAmount;
         }
     }
-    moveToEnemyY(yTarget) {
+    moveToY(yTarget) {
         if (this.y < yTarget) { // go down 
             let diff = yTarget - this.y;
             let moveAmount = Math.min(diff, this.move);
@@ -57,14 +59,14 @@ class SpaceMarine extends Boi {
     constructor(game, x, y) {
         super(game, x, y);
         this.color = "Blue"
-        this.killRange = 50;
+        this.killRange = 100;
         this.reloaded = true;
-        this.reloadTime = 100;
+        this.reloadTime = 50;
         this.reloadStart = Date.now();
         this.speed = 1;
     }
     update() {
-        const enemy = super.findNearestEnemy('tyranids');
+        const enemy = this.findNearestEnemy('tyranids');
         this.moveToEnemy(enemy);
         this.slayXenos(enemy);
     }
@@ -73,17 +75,12 @@ class SpaceMarine extends Boi {
         let xTarget = getEnemyLaneXOrY(this, enemy, 'x');
         let yTarget = getEnemyLaneXOrY(this, enemy, 'y');
         if (this.inXLane()) {
-            super.moveToEnemyX(xTarget);
-            super.moveToEnemyY(yTarget);
+            super.moveToX(xTarget);
+            super.moveToY(yTarget);
         } else {
-            super.moveToEnemyY(yTarget);
-            super.moveToEnemyX(xTarget);
+            super.moveToY(yTarget);
+            super.moveToX(xTarget);
         }
-        // if (this.move == this.speed) {
-        //     console.log(this, enemy);
-        //     console.log(xTarget)
-        //     console.log(yTarget);
-        // }
     }
     slayXenos(enemy) {
         // can only kill with line of sight
@@ -97,10 +94,35 @@ class SpaceMarine extends Boi {
             enemy.removeFromWorld = true;
             this.reloaded = false;
             this.reloadStart = Date.now();
-            // if (this.game.spawnTyranid)
-            //     this.game.spawnAnotherTyranid = true;
-            // this.game.spawnTyranid = true;
-            // spawnTyranid(this.game);
+        }
+    }
+    findNearestEnemy(species) {
+        let nearest = this.targetLocation;
+        let distNearest = distance(this, nearest);
+        this.game[species].forEach( other => {
+            let distOther = distance(this, other);
+            if (distNearest > distOther && !other.removeFromWorld && !isWallInTheWay(this, other)) {
+                nearest = other;
+                distNearest = distOther;
+            }
+        });
+        if (nearest.x === this.targetLocation.x)
+        console.log("NO NEAREST ENEMY")
+
+        return nearest;
+    }
+    handleTargetLocation() {
+        if (this.targetLocation === 0)
+            this.targetLocation = {x:STARTX + LANE_WIDTH * 15, y:STARTY + LANE_WIDTH * 9}
+        else if (this.targetLocation === 1)
+            this.targetLocation = {x:STARTX + LANE_WIDTH * 9, y:STARTY + LANE_WIDTH * 3}
+        else if (this.targetLocation === 2)
+            this.targetLocation = {x:STARTX + LANE_WIDTH * 3, y:STARTY + LANE_WIDTH * 9}
+        else if (this.targetLocation === 3)
+            this.targetLocation = {x:STARTX + LANE_WIDTH * 9, y:STARTY + LANE_WIDTH * 15}
+        else {
+            console.log("unexpected marine target location");
+            this.targetLocation = {x:STARTX + LANE_WIDTH * 15, y:STARTY + LANE_WIDTH * 9}
         }
     }
     inXLane() {
@@ -109,14 +131,57 @@ class SpaceMarine extends Boi {
     }
 }
 
+function isWallInTheWay(a, b) {
+    // marines ignore aliens behind walls
+    // aliens move up to walls and wait to breach
+    let closeWall = STARTX + LANE_WIDTH * 2;
+    let farWall = STARTX + LANE_WIDTH * 16;
+    if (isWallBetweenUs(a, b, closeWall, 'x', 'y')) {
+        return "left";
+    } else if (isWallBetweenUs(a, b, farWall, 'x', 'y')) {
+        return "right"
+    } else if (isWallBetweenUs(a, b, closeWall, 'y', 'x')) {
+        return "top"
+    } else if (isWallBetweenUs(a, b, farWall, 'y', 'x')) {
+        return "bot"
+    }
+    console.log(false)
+    return false;
+}
+function isWallBetweenUs(me, them, wall, xOrY, theOtherXY) {
+    // let mid = Math.abs(me[theOtherXY] - them[theOtherXY] / 2)
+            // wall existance 
+    return (me[xOrY] > wall && them[xOrY] < wall
+        || me[xOrY] < wall && them[xOrY] > wall)
+        && (// length of wall blocking our line of sight
+            (me[theOtherXY] > STARTX + LANE_WIDTH * 4 && me[theOtherXY] < STARTX + LANE_WIDTH * 14) //between 4 & 14 wall length
+         && (them[theOtherXY] > STARTX + LANE_WIDTH * 4 && them[theOtherXY] < STARTX + LANE_WIDTH * 14) 
+        )
+}
+function onAWall(me) {
+    let closeWall = STARTX + LANE_WIDTH * 2;
+    let farWall = STARTX + LANE_WIDTH * 16;
+    if (me.x === closeWall && me.y > STARTY + LANE_WIDTH * 4 && my.y < STARTY + LANE_WIDTH * 14)
+        return 'left'
+    if (me.x === farWall && me.y > STARTY + LANE_WIDTH * 4 && my.y < STARTY + LANE_WIDTH * 14)
+        return 'left'
+    if (me.y === closeWall && me.x > STARTX + LANE_WIDTH * 4 && my.x < STARTX + LANE_WIDTH * 14)
+        return 'left'
+    if (me.y === farWall && me.x > STARTX + LANE_WIDTH * 4 && my.x < STARTX + LANE_WIDTH * 14)
+        return 'left'
+    return false;
+}
+
 class Tyranid extends Boi {
     constructor(game, x, y) {
         super(game, x, y);
         this.speed = 2.5;
         this.smellRange = 400;
         this.randomTimer = Date.now();
+        this.onAWall = false;
     }
     update() {
+        this.onAWall = onAWall(this);
         const enemy = super.findNearestEnemy('marines');
         if (this.smellRange >= distance(this, enemy))
             this.moveToEnemy(enemy);
@@ -130,11 +195,11 @@ class Tyranid extends Boi {
         let yTarget = getEnemyLaneXOrY(this, enemy, 'y');
 
         if (this.inXLane()) {
-            super.moveToEnemyX(xTarget);
-            super.moveToEnemyY(yTarget);
+            super.moveToX(xTarget);
+            super.moveToY(yTarget);
         } else {
-            super.moveToEnemyY(yTarget);
-            super.moveToEnemyX(xTarget);
+            super.moveToY(yTarget);
+            super.moveToX(xTarget);
         }
     }
     moveRandomly() {
@@ -172,14 +237,10 @@ class Tyranid extends Boi {
     }
     slayMarine(enemy) {
         if (isCircleCollidingWithCircle(this, enemy)) {
-            enemy.removeFromWorld = true;
-            // if(this.game.spawnMarine) 
-            //     this.game.spawnAnotherMarine = true;
-            // this.game.spawnMarine = true;
-            this.removeFromWorld = true;
-            // if(this.game.spawnTyranid) 
-            //     this.game.spawnAnotherTyranid = true;
-            // this.game.spawnTyranid = true;
+            if (!enemy.removeFromWorld) {
+                enemy.removeFromWorld = true;
+                this.removeFromWorld = true;
+            }
         }
     }
     closerInX(enemy) {
@@ -229,8 +290,7 @@ const BACKGROUND_SCALE = 0.86;
 const LANE_WIDTH = 50 * BACKGROUND_SCALE;
 const STARTX = 30 * BACKGROUND_SCALE;
 const STARTY = 30 * BACKGROUND_SCALE;
-const TYRANID_COUNT = 20;
-const MARINE_COUNT = 4;
+
 
 class Background extends Entity {
     constructor(game, AM, srcX, srcY, srcW, srcH, x, y) {
@@ -277,9 +337,44 @@ function generateMarineSpawnArray() {
 function spawnMarine(game) {
     if (marineArrayCount >= marineArray.length)
         marineArrayCount = 0;
-    // console.log(marineArray)
-    game.addMarine(new SpaceMarine(game, marineArray[marineArrayCount].x, marineArray[marineArrayCount++].y));
+    let marine = new SpaceMarine(game, marineArray[marineArrayCount].x, marineArray[marineArrayCount++].y);
+    marine.targetLocation = Math.floor(marineArrayCount / 12.5);
+    marine.handleTargetLocation();
+    game.addMarine(marine);
 }
+
+function drawWalls(ctx) {
+    ctx.strokeStyle = "brown";
+    ctx.lineWidth = 5;
+
+    let closeWall = STARTX + LANE_WIDTH * 2;
+    let farWall = STARTX + LANE_WIDTH * 16;
+
+    ctx.beginPath();
+    ctx.moveTo(closeWall, STARTY + LANE_WIDTH * 4);
+    ctx.lineTo(closeWall, STARTY + LANE_WIDTH * 14);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(farWall, STARTY + LANE_WIDTH * 4);
+    ctx.lineTo(farWall, STARTY + LANE_WIDTH * 14);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(STARTX + LANE_WIDTH * 4, closeWall);
+    ctx.lineTo(STARTY + LANE_WIDTH * 14, closeWall);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(STARTX + LANE_WIDTH * 4, farWall);
+    ctx.lineTo(STARTY + LANE_WIDTH * 14, farWall);
+    ctx.stroke();
+
+
+}
+
+const TYRANID_COUNT = 20;
+const MARINE_COUNT = 3;
 
 const socket = io.connect("http://24.16.255.56:8888");
 var ASSET_MANAGER = new AssetManager();
@@ -323,10 +418,12 @@ ASSET_MANAGER.downloadAll(function () {
     for (let i = 0; i < MARINE_COUNT; i++) {
         spawnMarine(gameEngine);
     }
-    for (let i = 0; i < TYRANID_COUNT; i++) {
-        spawnTyranid(gameEngine);
-    }
-    // gameEngine.addTyranid(new Boi(gameEngine, STARTX + LANE_WIDTH * 6, STARTY + LANE_WIDTH * 12));
+    // for (let i = 0; i < TYRANID_COUNT; i++) {
+    //     spawnTyranid(gameEngine);
+    // }
+
+    gameEngine.addTyranid(new Tyranid(gameEngine, STARTX + LANE_WIDTH * 1, STARTY + LANE_WIDTH * 5));
+
     gameEngine.background = new Background(gameEngine, ASSET_MANAGER, 0, 0, 930, 930, 0, 0);
     gameEngine.init(ctx);
     gameEngine.start();
