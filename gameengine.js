@@ -42,6 +42,7 @@ class GameEngine {
         this.right = 0;
         this.top = 0;
         this.bot = 0;
+        this.socket = socket;
     }
     init(ctx) {
         this.ctx = ctx;
@@ -124,10 +125,41 @@ class GameEngine {
         this.updateMarineCount();
         this.updateTyranidCount();
         this.draw();
-        this.click = null;
-        this.rightclick = null;
-        this.wheel = null;
+        // this.click = null;
+        // this.rightclick = null;
+        // this.wheel = null;
     }
+    save() {
+        let saved = {};
+        saved.marines = [];
+        this.marines.forEach( marine => {
+            saved.marines.push(saveDude(marine))
+        })
+        saved.tyranids = [];
+        this.tyranids.forEach( tyranid => {
+            saved.tyranids.push(saveDude(tyranid))
+        })
+        return { studentName: "Conner Canning", satename: "state", data: saved}
+    }
+    load(saved) {
+        console.log('saved:', saved)
+        this.marines = [];
+        saved.marines.forEach( marine => {
+            this.addMarine(marine);
+        });
+        this.tyranids = [];
+        saved.tyranids.forEach( tyranid => {
+            this.addTyranid(tyranid);
+        });
+    }
+}
+function saveDude(dude) {
+    let saved = {};
+    Object.keys(dude).forEach( key => {
+        if (key != 'game')
+            saved[key] = dude[key]
+    })
+    return saved;
 }
 
 class Entity {

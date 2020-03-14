@@ -420,18 +420,18 @@ ASSET_MANAGER.downloadAll(function () {
     saveButton.onclick = function (e) {
         console.log('save pressed');
         let message = gameEngine.save();
-        // console.log(message);
+        console.log(message);
         socket.emit("save", message);
     };
     loadButton.onclick = function (e) {
         console.log('load pressed');
         console.log(socket);
-        socket.emit("load", {studentname:"Conner Canning", statename:"sateName"});
+        socket.emit("load", {studentname:"Conner Canning", statename:"state"});
     };
     socket.on("load", function(data) {
-        console.log(data);
-        let saveState = data.data;
-        gameEngine.load(saveState);
+        console.log("LOADING RIGHT NOW", data.data);
+        let saved = data.data;
+        gameEngine.load(saved);
     });
     socket.on("connect", function () {
         console.log("Socket connected.")
