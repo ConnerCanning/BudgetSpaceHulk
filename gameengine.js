@@ -38,10 +38,7 @@ class GameEngine {
         this.wheel = null;
         this.surfaceWidth = null;
         this.surfaceHeight = null;
-        this.left = 0;
-        this.right = 0;
-        this.top = 0;
-        this.bot = 0;
+        this.marineArrayCount = 0;
         this.socket = socket;
     }
     init(ctx) {
@@ -139,25 +136,38 @@ class GameEngine {
         this.tyranids.forEach( tyranid => {
             saved.tyranids.push(saveDude(tyranid))
         })
-        return { studentName: "Conner Canning", satename: "state", data: saved}
+        saved.marineArrayCount = this.marineArrayCount;
+        return {studentName:"Conner Canning", satename:"aState", data: JSON.stringify(saved)};
     }
     load(saved) {
-        console.log('saved:', saved)
+        let save = JSON.parse(saved)
+        save = JSON.parse(save.data);
         this.marines = [];
-        saved.marines.forEach( marine => {
+        save.marines.forEach( marineSaved => {
+            let marine = new SpaceMarine(this, marineSaved.x, marineSaved.y);
+            Object.keys(marineSaved).forEach( key => {
+                marine[key] = marineSaved[key]
+            });
+            marine.game = this;
             this.addMarine(marine);
         });
         this.tyranids = [];
-        saved.tyranids.forEach( tyranid => {
-            this.addTyranid(tyranid);
+        save.tyranids.forEach( tyranid => {
+            let nid = new Tyranid(this, tyranid.x, tyranid.y);
+            Object.keys(tyranid).forEach( key => {
+                nid[key] = nid[key]
+            });
+            nid.game = this;
+            this.addTyranid(nid);
         });
+        this.marineArrayCount = save.marineArrayCount;
     }
 }
 function saveDude(dude) {
     let saved = {};
     Object.keys(dude).forEach( key => {
         if (key != 'game')
-            saved[key] = dude[key]
+            saved[key] = dude[key];
     })
     return saved;
 }

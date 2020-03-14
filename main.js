@@ -1,3 +1,4 @@
+const socket = io.connect("http://24.16.255.56:8888");
 
 class Boi extends Entity {
     constructor(game, x, y) {
@@ -208,17 +209,6 @@ class Tyranid extends Boi {
             enemy.swarmTimer = Date.now();
             this.moveToEnemy(enemy)
         } // else don't move :D
-
-
-        // if (!this.waitOnWall)
-        //     this.waitOnWall = true;
-        // this.game[this.onAWall]++;
-        // if (this.game[this.onAWall] > WALL_THRESHOLD) {
-        //     enemy.swarmThisGuy = true;
-        //     enemy.swarmTimer = Date.now();
-        // }
-        // if I have the bois with me we all go in
-        
     }
     moveToEnemy(enemy) {
         this.move = this.speed;
@@ -349,7 +339,6 @@ function getRandomInt(max) {
 function spawnTyranid(game) {
     game.addTyranid(new Tyranid(game, STARTX + LANE_WIDTH * getRandomInt(19), STARTY + LANE_WIDTH * getRandomInt(19)));
 }
-let marineArrayCount = 0;
 const marineArray = [];
 function generateMarineSpawnArray() {
     for (let i = 0; i < 13; i++) {
@@ -366,10 +355,10 @@ function generateMarineSpawnArray() {
     }
 }
 function spawnMarine(game) {
-    if (marineArrayCount >= marineArray.length)
-        marineArrayCount = 0;
-    let marine = new SpaceMarine(game, marineArray[marineArrayCount].x, marineArray[marineArrayCount++].y);
-    marine.targetLocation = Math.floor(marineArrayCount / 12.5);
+    if (game.marineArrayCount >= marineArray.length)
+        game.marineArrayCount = 0;
+    let marine = new SpaceMarine(game, marineArray[game.marineArrayCount].x, marineArray[game.marineArrayCount++].y);
+    marine.targetLocation = Math.floor(game.marineArrayCount / 12.5);
     marine.handleTargetLocation();
     game.addMarine(marine);
 }
@@ -408,28 +397,29 @@ const TYRANID_COUNT = 30;
 const MARINE_COUNT = 3;
 const WALL_THRESHOLD = 5;
 
-const socket = io.connect("http://24.16.255.56:8888");
 var ASSET_MANAGER = new AssetManager();
 ASSET_MANAGER.queueDownload(GO_PATH);
 ASSET_MANAGER.downloadAll(function () {
     var canvas = document.getElementById('gameWorld');
     var ctx = canvas.getContext('2d');
+    var gameEngine = new GameEngine();
 
     let saveButton = document.getElementById("save");
     let loadButton = document.getElementById("load");
     saveButton.onclick = function (e) {
         console.log('save pressed');
         let message = gameEngine.save();
-        console.log(message);
-        socket.emit("save", message);
+        message = JSON.stringify(message);
+        socket.emit("save", {studentname:"Conner Canning", statename:"aState", data:message});
+        // console.log(socket);
     };
     loadButton.onclick = function (e) {
         console.log('load pressed');
-        console.log(socket);
-        socket.emit("load", {studentname:"Conner Canning", statename:"state"});
+        // console.log(socket);
+        socket.emit("load", {studentname:"Conner Canning", statename:"aState"});
     };
     socket.on("load", function(data) {
-        console.log("LOADING RIGHT NOW", data.data);
+        // console.log("LOADING RIGHT NOW", data.data);
         let saved = data.data;
         gameEngine.load(saved);
     });
@@ -443,7 +433,6 @@ ASSET_MANAGER.downloadAll(function () {
         console.log("Socket reconnected.")
     });
 
-    var gameEngine = new GameEngine();
     // gameEngine.addMarine(new SpaceMarine(gameEngine, STARTX /*+ LANE_WIDTH * 15*/, STARTY /*+ LANE_WIDTH* 15*/));
     // gameEngine.addTyranid(new Boi(gameEngine, STARTX + LANE_WIDTH * Math.random(19), STARTY + LANE_WIDTH * Math.random(19)));
     generateMarineSpawnArray();
@@ -453,11 +442,6 @@ ASSET_MANAGER.downloadAll(function () {
     for (let i = 0; i < TYRANID_COUNT; i++) {
         spawnTyranid(gameEngine);
     }
-
-    // gameEngine.addTyranid(new Tyranid(gameEngine, STARTX + LANE_WIDTH * 1, STARTY + LANE_WIDTH * 8));
-    // gameEngine.addTyranid(new Tyranid(gameEngine, STARTX + LANE_WIDTH * 3, STARTY + LANE_WIDTH * 8));
-    // gameEngine.addMarine(new SpaceMarine(gameEngine, STARTX + LANE_WIDTH * 5, STARTY + LANE_WIDTH * 8));
-
     gameEngine.background = new Background(gameEngine, ASSET_MANAGER, 0, 0, 930, 930, 0, 0);
     gameEngine.init(ctx);
     gameEngine.start();
