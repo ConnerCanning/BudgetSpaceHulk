@@ -61,7 +61,7 @@ class SpaceMarine extends Boi {
         this.reloaded = true;
         this.reloadTime = 100;
         this.reloadStart = Date.now();
-        this.speed = 2;
+        this.speed = 1;
     }
     update() {
         const enemy = super.findNearestEnemy('tyranids');
@@ -112,7 +112,7 @@ class SpaceMarine extends Boi {
 class Tyranid extends Boi {
     constructor(game, x, y) {
         super(game, x, y);
-        this.speed = 5;
+        this.speed = 2.5;
         this.smellRange = 400;
         this.randomTimer = Date.now();
     }
@@ -188,6 +188,14 @@ class Tyranid extends Boi {
     inXLane() {
         // an X lane is a row left/right across the grid where you can adjust x freely legally
         return (this.y - STARTY) % LANE_WIDTH === 0;
+    }
+    countNearbyAllies() {
+        let count = 0;
+        this.game.tyranids.forEach( nid => {
+            if (distance(this, nid) < 100)
+                count++;
+        });
+        return count;
     }
 }
 
@@ -269,16 +277,45 @@ function generateMarineSpawnArray() {
 function spawnMarine(game) {
     if (marineArrayCount >= marineArray.length)
         marineArrayCount = 0;
-    console.log(marineArray)
+    // console.log(marineArray)
     game.addMarine(new SpaceMarine(game, marineArray[marineArrayCount].x, marineArray[marineArrayCount++].y));
 }
 
-
+const socket = io.connect("http://24.16.255.56:8888");
 var ASSET_MANAGER = new AssetManager();
 ASSET_MANAGER.queueDownload(GO_PATH);
 ASSET_MANAGER.downloadAll(function () {
     var canvas = document.getElementById('gameWorld');
     var ctx = canvas.getContext('2d');
+
+    let saveButton = document.getElementById("save");
+    let loadButton = document.getElementById("load");
+    saveButton.onclick = function (e) {
+        console.log('save pressed');
+        let message = gameEngine.save();
+        // console.log(message);
+        socket.emit("save", message);
+    };
+    loadButton.onclick = function (e) {
+        console.log('load pressed');
+        console.log(socket);
+        socket.emit("load", {studentname:"Conner Canning", statename:"sateName"});
+    };
+    socket.on("load", function(data) {
+        console.log(data);
+        let saveState = data.data;
+        gameEngine.load(saveState);
+    });
+    socket.on("connect", function () {
+        console.log("Socket connected.")
+    });
+    socket.on("disconnect", function () {
+        console.log("Socket disconnected.")
+    });
+    socket.on("reconnect", function () {
+        console.log("Socket reconnected.")
+    });
+
     var gameEngine = new GameEngine();
     // gameEngine.addMarine(new SpaceMarine(gameEngine, STARTX /*+ LANE_WIDTH * 15*/, STARTY /*+ LANE_WIDTH* 15*/));
     // gameEngine.addTyranid(new Boi(gameEngine, STARTX + LANE_WIDTH * Math.random(19), STARTY + LANE_WIDTH * Math.random(19)));
